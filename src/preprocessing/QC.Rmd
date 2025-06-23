@@ -1,0 +1,384 @@
+---
+title: "QC_IMC_Stabdal"
+author: "LH"
+date: "2024-04-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(cytomapper)
+```
+
+```{r}
+# Read in your Data
+##images <- readRDS("data/images.rds")
+##masks <- readRDS("data/masks.rds")
+##spe <- readRDS("data/spe.rds")
+##
+```
+
+```{r}
+set.seed(20240423)
+img_ids <- sample(seq_along(images), 3)
+#img_ids1 <- sample(seq_along(images1), 3)
+```
+
+```{r}
+#cur_images <- images[img_ids]
+#cur_images <- cytomapper::normalize(cur_images, separateImages = TRUE)
+#cur_images <- cytomapper::normalize(cur_images, inputRange = c(0, 0.2))
+#cur_images1 <- images[img_ids1]
+#cur_images1 <- cytomapper::normalize(cur_images1, separateImages = TRUE)
+#cur_images1 <- cytomapper::normalize(cur_images1, inputRange = c(0, 0.2))
+```
+
+```{r}
+library(viridis)
+library(dittoSeq)
+```
+
+
+```{r, fig.width=12, fig.height=10}
+#cur_cells <- sample(seq_len(ncol(spe1)), 5000)
+#
+#dittoHeatmap(spe1[,cur_cells], 
+#             genes = rownames(spe1)[rowData(spe1)$use_channel],
+#             assay = "exprs", 
+#             cluster_cols = TRUE, 
+#             scale = "none",
+#             heatmap.colors = viridis(100), 
+#             annot.by = "indication",
+#             annotation_colors = list(indication = metadata(spe1)$color_vectors$indication))
+```
+```{r, fig.width=12, fig.height=10}
+#cur_cells <- sample(seq_len(ncol(spe)), 5000)
+#
+#dittoHeatmap(spe[,cur_cells], 
+#             genes = rownames(spe)[rowData(spe1)$use_channel],
+#             assay = "exprs", 
+#             cluster_cols = TRUE, 
+#             scale = "none",
+#             heatmap.colors = viridis(100), 
+#             annot.by = "indication",
+#             annotation_colors = list(indication = metadata(spe)$color_vectors$indication))
+```
+```{r}
+# Image level quality
+## Using SNR = Is/In
+library(tidyverse)
+library(ggrepel)
+library(EBImage)
+```
+```{r}
+cur_snr <- lapply(names(images), function(x){
+    img <- images[[x]]
+    mat <- apply(img, 3, function(ch){
+        # Otsu threshold
+        thres <- otsu(ch, range = c(min(ch), max(ch)), levels = 65536)
+        # Signal-to-noise ratio
+        snr <- mean(ch[ch > thres]) / mean(ch[ch <= thres])
+        # Signal intensity
+        ps <- mean(ch[ch > thres])
+        
+        return(c(snr = snr, ps = ps))
+    })
+    t(mat) %>% as.data.frame() %>% 
+        mutate(image = x,
+               marker = colnames(mat)) %>% 
+        pivot_longer(cols = c(snr, ps))
+})
+```
+```{r, fig.width=12, fig.height=10}
+cur_snr <- do.call(rbind, cur_snr)
+```
+```{r, fig.width=12, fig.height=10}
+cur_snr %>% 
+    group_by(marker, name) %>%
+    summarize(log_mean = log2(mean(value))) %>%
+    pivot_wider(names_from = name, values_from = log_mean) %>%
+    ggplot() +
+    geom_point(aes(ps, snr)) +
+    geom_label_repel(aes(ps, snr, label = marker)) +
+    theme_minimal(base_size = 15) + ylab("Signal-to-noise ratio [log2]") +
+    xlab("Signal intensity [log2]")
+```
+
+
+```{r}
+cur_snr1 <- lapply(names(images1), function(x){
+    img <- images1[[x]]
+    mat <- apply(img, 3, function(ch){
+        # Otsu threshold
+        thres <- otsu(ch, range = c(min(ch), max(ch)), levels = 65536)
+        # Signal-to-noise ratio
+        snr <- mean(ch[ch > thres]) / mean(ch[ch <= thres])
+        # Signal intensity
+        ps <- mean(ch[ch > thres])
+        
+        return(c(snr = snr, ps = ps))
+    })
+    t(mat) %>% as.data.frame() %>% 
+        mutate(image = x,
+               marker = colnames(mat)) %>% 
+        pivot_longer(cols = c(snr, ps))
+})
+```
+```{r, fig.width=12, fig.height=10}
+cur_snr1 <- do.call(rbind, cur_snr1)
+```
+```{r, fig.width=12, fig.height=10}
+cur_snr1 %>% 
+    group_by(marker, name) %>%
+    summarize(log_mean = log2(mean(value)+1)) %>%
+    pivot_wider(names_from = name, values_from = log_mean) %>%
+    ggplot() +
+    geom_point(aes(ps, snr)) +
+    geom_label_repel(aes(ps, snr, label = marker)) +
+    theme_minimal(base_size = 15) + ylab("Signal-to-noise ratio [log2]") +
+    xlab("Signal intensity [log2]")
+```
+
+
+```{r}
+library(scuttle)
+```
+```{r, fig.width=10, fig.height=12}
+image_mean <- aggregateAcrossCells(spe, 
+                                   ids = spe$sample_id, 
+                                   statistics="mean",
+                                   use.assay.type = "counts")
+assay(image_mean, "exprs") <- asinh(counts(image_mean))
+
+dittoHeatmap(image_mean, genes = rownames(spe)[rowData(spe)$use_channel],
+             assay = "exprs", cluster_cols = TRUE, scale = "none",
+             heatmap.colors = viridis(100), 
+             annot.by = c("indication", "patient_id", "ROI"),
+             annotation_colors = list(indication = metadata(spe)$color_vectors$indication,
+                                      patient_id = metadata(spe)$color_vectors$patient_id,
+                                      ROI = metadata(spe)$color_vectors$ROI),
+             show_colnames = TRUE)
+```
+
+```{r, fig.width=10, fig.height=12}
+image_mean1 <- aggregateAcrossCells(spe1, 
+                                   ids = spe1$sample_id, 
+                                   statistics="mean",
+                                   use.assay.type = "counts")
+assay(image_mean1, "exprs") <- asinh(counts(image_mean1))
+
+dittoHeatmap(image_mean1, genes = rownames(spe1)[rowData(spe1)$use_channel],
+             assay = "exprs", cluster_cols = TRUE, scale = "none",
+             heatmap.colors = viridis(100), 
+             annot.by = c("indication", "patient_id", "ROI"),
+             annotation_colors = list(indication = metadata(spe1)$color_vectors$indication,
+                                      patient_id = metadata(spe1)$color_vectors$patient_id,
+                                      ROI = metadata(spe1)$color_vectors$ROI),
+             show_colnames = TRUE)
+```
+
+
+```{r}
+# Cell-level qc
+library(mclust)
+```
+```{r, message=FALSE, warning=False, echo=FALSE, results='hide'}
+set.seed(20240423)
+mat <- sapply(seq_len(nrow(spe)), function(x){
+    cur_exprs <- assay(spe, "exprs")[x,]
+    cur_counts <- assay(spe, "counts")[x,]
+    
+    cur_model <- Mclust(cur_exprs, G = 2)
+    mean1 <- mean(cur_counts[cur_model$classification == 1])
+    mean2 <- mean(cur_counts[cur_model$classification == 2])
+    
+    signal <- ifelse(mean1 > mean2, mean1, mean2)
+    noise <- ifelse(mean1 > mean2, mean2, mean1)
+    
+    return(c(snr = signal/noise, ps = signal))
+})
+```
+```{r}
+cur_snr <- t(mat) %>% as.data.frame() %>% 
+        mutate(marker = rownames(spe))
+```
+```{r, fig.width=12, fig.height=10}
+cur_snr %>% ggplot() +
+    geom_point(aes(log2(ps), log2(snr))) +
+    geom_label_repel(aes(log2(ps), log2(snr), label = marker)) +
+    theme_minimal(base_size = 15) + ylab("Signal-to-noise ratio [log2]") +
+    xlab("Signal intensity [log2]")
+```
+```{r, message=FALSE, warning=False, echo=FALSE, results='hide'}
+mat1 <- sapply(seq_len(nrow(spe1)), function(x){
+    cur_exprs <- assay(spe1, "exprs")[x,]
+    cur_counts <- assay(spe1, "counts")[x,]
+    
+    cur_model <- Mclust(cur_exprs, G = 2)
+    mean1 <- mean(cur_counts[cur_model$classification == 1])
+    mean2 <- mean(cur_counts[cur_model$classification == 2])
+    
+    signal <- ifelse(mean1 > mean2, mean1, mean2)
+    noise <- ifelse(mean1 > mean2, mean2, mean1)
+    
+    return(c(snr = signal/noise, ps = signal))
+})
+```
+```{r}
+cur_snr1 <- t(mat1) %>% as.data.frame() %>% 
+        mutate(marker = rownames(spe1))
+```
+```{r, fig.width=12, fig.height=10}
+cur_snr1 %>% ggplot() +
+    geom_point(aes(log2(ps), log2(snr))) +
+    geom_label_repel(aes(log2(ps), log2(snr), label = marker)) +
+    theme_minimal(base_size = 15) + ylab("Signal-to-noise ratio [log2]") +
+    xlab("Signal intensity [log2]")
+```
+```{r, fig.width=14, fig.height=5}
+dittoPlot(spe, var = "area", 
+          group.by = "sample_id", 
+          plots = "boxplot") +
+        ylab("Cell area") + xlab("")
+```
+
+```{r, fig.width=14, fig.height=5}
+dittoPlot(spe1, var = "area", 
+          group.by = "sample_id", 
+          plots = "boxplot") +
+        ylab("Cell area") + xlab("")
+```
+```{r}
+summary(spe$area)
+```
+
+```{r}
+summary(spe1$area)
+```
+
+```{r, fig.width=24, fig.height=22, warning=FALSE, message=FALSE}
+multi_dittoPlot(spe, vars = rownames(spe)[rowData(spe)$use_channel],
+               group.by = "patient_id", plots = "ridgeplot", 
+               assay = "exprs",
+               ncol = 8,
+               color.panel = metadata(spe)$color_vectors$patient_id)
+```
+
+```{r, fig.width=24, fig.height=22, warning=FALSE, message=FALSE}
+multi_dittoPlot(spe1, vars = rownames(spe)[rowData(spe1)$use_channel],
+               group.by = "patient_id", plots = "ridgeplot", 
+               assay = "exprs",
+               ncol = 8,
+               color.panel = metadata(spe1)$color_vectors$patient_id)
+```
+
+```{r, fig.width=24, fig.height=22, warning=FALSE, message=FALSE}
+multi_dittoPlot(spe, vars = rownames(spe)[rowData(spe)$use_channel],
+               group.by = "patient_id", plots = "ridgeplot", 
+               assay = "counts",
+               ncol = 8,           
+               color.panel = metadata(spe)$color_vectors$patient_id)
+                                                                           
+```
+
+
+```{r}
+library(Matrix)
+library(irlba)
+library(scater)
+```
+```{r}
+set.seed(20240423)
+spe <- runUMAP(spe, subset_row = rowData(spe)$use_channel, exprs_values = "exprs") 
+#spe <- runTSNE(spe, subset_row = rowData(spe)$use_channel, exprs_values = "exprs") 
+#spe1 <- runUMAP(spe1, subset_row = rowData(spe)$use_channel, exprs_values = "exprs") 
+#spe1 <- runTSNE(spe1, subset_row = rowData(spe)$use_channel, exprs_values = "exprs") 
+```
+
+
+```{r}
+library(patchwork)
+library(ggrepel)
+```
+
+```{r, fig.width= 16, fig.height=12}
+p1 <- dittoDimPlot(spe, var = "patient_id", reduction.use = "UMAP", size = 0.2) + 
+    scale_color_manual(values = metadata(spe)$color_vectors$patient_id) +
+    ggtitle("Patient ID on UMAP")
+#p2 <- dittoDimPlot(spe, var = "patient_id", reduction.use = "TSNE", size = 0.2) + 
+#    scale_color_manual(values = metadata(spe)$color_vectors$patient_id) +
+#    ggtitle("Patient ID on TSNE")
+
+#p3 <- dittoDimPlot(spe, var = "indication", reduction.use = "UMAP", size = 0.2) + 
+##  ggtitle("Indication on UMAP")
+#p4 <- dittoDimPlot(spe, var = "indication", reduction.use = "TSNE", size = 0.2) + 
+#    scale_color_manual(values = metadata(spe)$color_vectors$indication) +
+#    ggtitle("Indication on TSNE")
+
+(p1)
+```
+
+```{r}
+umap_coords <- as.data.frame(reducedDim(spe, "UMAP"))
+patient_ids <- spe$patient_id
+library(dplyr)
+median_coords <- umap_coords %>%
+    mutate(patient_id = patient_ids) %>%
+    group_by(patient_id) %>%
+    summarise(x = median(UMAP1), y = median(UMAP2))
+```
+
+
+```{r, fig.width= 28, fig.height=16}
+library(ggrepel)
+
+p2 <- p1 + 
+    geom_text(data = median_coords, aes(x = x, y = y, label = patient_id),
+              size = 3, fontface = "bold.italic", check_overlap = TRUE)
+print(p2)
+```
+
+
+
+```{r, fig.width= 14, fig.height=12}
+p1 <- dittoDimPlot(spe1, var = "patient_id", reduction.use = "UMAP", size = 0.2) + 
+    scale_color_manual(values = metadata(spe1)$color_vectors$patient_id) +
+    ggtitle("Patient ID on UMAP")
+p2 <- dittoDimPlot(spe1, var = "patient_id", reduction.use = "TSNE", size = 0.2) + 
+    scale_color_manual(values = metadata(spe1)$color_vectors$patient_id) +
+    ggtitle("Patient ID on TSNE")
+
+p3 <- dittoDimPlot(spe1, var = "indication", reduction.use = "UMAP", size = 0.2) + 
+    scale_color_manual(values = metadata(spe1)$color_vectors$indication) +
+    ggtitle("Indication on UMAP")
+p4 <- dittoDimPlot(spe1, var = "indication", reduction.use = "TSNE", size = 0.2) + 
+    scale_color_manual(values = metadata(spe1)$color_vectors$indication) +
+    ggtitle("Indication on TSNE")
+
+(p1 + p2) / (p3 + p4)
+```
+
+```{r, fig.width= 14, fig.height=12}
+p1 <- dittoDimPlot(spe, var = "CD34", reduction.use = "UMAP", 
+                   assay = "exprs", size = 0.2) +
+    scale_color_viridis(name = "CD34") +
+    ggtitle("CD34 expression on UMAP")
+p2 <- dittoDimPlot(spe, var = "CD138", reduction.use = "UMAP", 
+                   assay = "exprs", size = 0.2) +
+    scale_color_viridis(name = "CD138") +
+    ggtitle("CD138 expression on UMAP")
+p3 <- dittoDimPlot(spe, var = "CD34", reduction.use = "TSNE", 
+                   assay = "exprs", size = 0.2) +
+    scale_color_viridis(name = "CD34") +
+    ggtitle("CD34 expression on TSNE")
+p4 <- dittoDimPlot(spe, var = "CD138", reduction.use = "TSNE", 
+                   assay = "exprs", size = 0.2) +
+    scale_color_viridis(name = "CD138") +
+    ggtitle("CD138 expression on TSNE")
+
+(p1 + p2) / (p3 + p4)
+```
+

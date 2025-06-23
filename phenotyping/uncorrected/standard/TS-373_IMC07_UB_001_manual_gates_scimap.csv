@@ -1,0 +1,17 @@
+markers,gate
+CD45,0.6
+CD3,0.9
+CD4,0.8
+CD8,1.1
+CD68,1.6
+CD11b,0.9
+CD11c,0.6
+HLA-DR,1.1
+CathepsinK,2.0
+MPO,0.4
+CD138,1.5
+CD38,1.0
+CD34,0.5
+RUNX2,0.9
+Perlipin,1.4
+CD36,1.5

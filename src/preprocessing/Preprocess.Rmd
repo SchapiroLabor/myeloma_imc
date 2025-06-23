@@ -1,0 +1,146 @@
+---
+title: "Preprocess"
+author: "LH"
+date: "2024-04-23"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(cytomapper)
+library(imcRtools)
+library(tidyverse)
+library(dittoSeq)
+library(RColorBrewer)
+```
+
+```{r}
+spe = read_steinbock('/Users/lukashat/Documents/PhD_Schapiro/Projects/Myeloma_Standal/QC/standard', graphs_folder = NULL)
+#spe1 = read_steinbock('/Users/lukashat/Documents/PhD_Schapiro/Projects/Myeloma_Standal/QC/qc_92-96/denoised', graphs_folder = NULL)
+```
+
+```{r}
+head(colData(spe))
+```
+```{r}
+head(spatialCoords(spe))
+```
+```{r}
+head(rowData(spe))
+```
+```{r}
+colnames(spe) = paste0(spe$sample_id, "_", spe$ObjectNumber)
+#colnames(spe1) = paste0(spe1$sample_id, "_", spe1$ObjectNumber)
+```
+```{r}
+meta = read.csv('/Users/lukashat/Documents/PhD_Schapiro/Projects/Myeloma_Standal/QC/meta.csv')
+```
+```{r}
+#spe$patient_id <- str_extract(spe$sample_id, "IMC([0-9]{2}-?[0-9]?)")
+spe$patient_id <- str_extract(spe$sample_id, "IMC\\d{2}([.-]\\d)?_(UB|MGUS|B)_\\d{3}")
+#spe1$patient_id <- str_extract(spe1$sample_id, "IMC([0-9]{2}-?[0-9]?)")
+```
+
+```{r}
+#spe$ROI <- str_extract(spe$sample_id, "00[1-8]")
+#spe1$ROI <- str_extract(spe1$sample_id, "00[1-8]")
+```
+```{r}
+spe$indication <- meta$Indication[match(spe$patient_id, meta$`Sample_ID`)]
+#spe1$indication <- meta$Indication[match(spe1$patient_id, meta$`Sample_ID`)]
+```
+```{r}
+dittoRidgePlot(spe, var = "CD138", group.by = "patient_id", assay = "counts") +
+    ggtitle("CD138 - before transformation")
+```
+
+```{r}
+assay(spe, "exprs") <- asinh(counts(spe)/1)
+#assay(spe1, "exprs") <- asinh(counts(spe1)/1)
+```
+
+```{r}
+dittoRidgePlot(spe, var = "CD138", group.by = "patient_id", assay = "exprs") +
+    ggtitle("CD138 - after transformation")
+```
+
+```{r}
+channels_to_exclude <- c('1', '2', '3', '4', '5', '191Ir', '193Ir', '6', 'HistoneH3', 'CD98')
+channels_to_exclude <- rownames(spe) %in% channels_to_exclude
+rowData(spe)$use_channel = !channels_to_exclude
+#rowData(spe1)$use_channel = !channels_to_exclude
+```
+
+```{r}
+color_vectors <- list()
+```
+```{r}
+color_ramp <- colorRampPalette(brewer.pal(9, "Set1"))
+```
+
+```{r}
+ROI <- setNames(brewer.pal(length(unique(spe$ROI)), name = "BrBG"), 
+                unique(spe$ROI))
+
+sample_id_colors <- c(brewer.pal(6, "YlOrRd")[3:5],
+                      brewer.pal(6, "PuBu")[3:6],
+                      brewer.pal(6, "YlGn")[3:5],
+                      brewer.pal(6, "BuPu")[3:6])
+sample_id <- setNames(rep(sample_id_colors, length.out = length(unique(spe$sample_id))),
+                      unique(spe$sample_id))
+
+patient_id <- setNames(color_ramp(length(unique(spe$patient_id))), 
+                unique(spe$patient_id))
+#sample_id <- setNames(rep(c(brewer.pal(6, "YlOrRd")[3:5],
+#                        brewer.pal(6, "PuBu")[3:6],
+#                        brewer.pal(6, "YlGn")[3:5],
+#                        brewer.pal(6, "BuPu")[3:6]), ceiling(16/14)),
+#                unique(spe$sample_id))
+indication <- setNames(brewer.pal(length(unique(spe$indication)), name = "Set2"), 
+                unique(spe$indication))
+
+color_vectors$ROI <- ROI
+color_vectors$patient_id <- patient_id
+color_vectors$sample_id <- sample_id
+color_vectors$indication <- indication
+
+metadata(spe)$color_vectors <- color_vectors
+#metadata(spe1)$color_vectors <- color_vectors
+```
+
+```{r}
+images = loadImages('/Users/lukashat/Documents/PhD_Schapiro/Projects/Myeloma_Standal/QC/Phenotypes/batch_inspection/img')
+#images1 = loadImages('/Users/lukashat/Documents/PhD_Schapiro/Projects/Myeloma_Standal/QC/qc_92-96/denoised/img')
+```
+```{r}
+masks <- loadImages("/Users/lukashat/Documents/PhD_Schapiro/Projects/Myeloma_Standal/QC/Phenotypes/batch_inspection/masks", as.is = TRUE)
+#masks1 = loadImages("/Users/lukashat/Documents/PhD_Schapiro/Projects/Myeloma_Standal/QC/qc_92-96/denoised/masks", as.is = TRUE)
+```
+
+
+```{r}
+channelNames(images) <- rownames(spe)
+#channelNames(images1) <- rownames(spe1)
+```
+```{r}
+all.equal(names(images), names(masks))
+```
+```{r}
+#all.equal(names(images1), names(masks1))
+```
+```{r}
+patient_id = str_extract(names(images), "IMC([0-9]{2}-?[0-9]?)")
+indication <- meta$Indication[match(patient_id, meta$`Sample_ID`)] 
+mcols(images) <- mcols(masks) <- DataFrame(sample_id = names(images),
+                                           patient_id = patient_id,
+                                           indication = indication)
+
+#mcols(images1) <- mcols(masks1) <- DataFrame(sample_id = names(images1),
+#                                           patient_id = patient_id,
+#                                           indication = indication)
+```
+

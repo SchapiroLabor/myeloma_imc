@@ -1,0 +1,12 @@
+Best trial:
+  Value: 0.8417497089471688
+  Params:
+    lambda: 0.00011707270070060082
+    alpha: 0.001228096604643458
+    gamma: 0.02764791189536408
+    colsample_bytree: 0.8780458882688161
+    subsample: 0.9232707202099525
+    learning_rate: 0.09128542214783157
+    n_estimators: 500
+    max_depth: 10
+    min_child_weight: 4

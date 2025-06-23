@@ -1,0 +1,14 @@
+# Ignore macOS system files
+.DS_Store
+
+# Ignore R history files
+.Rhistory
+
+# Ignore specific large files identified during push
+phenotyping/scanorama_corrected/manual_phenotypes_standard_scancorrected.csv
+phenotyping/scanorama_corrected/xgboost/standard/complete/best_xgb_model_complete.joblib
+phenotyping/scanorama_corrected/xgboost/standard/complete/best_xgb_model_complete.json
+phenotyping/uncorrected/manual_phenotypes_standard.csv
+phenotyping/uncorrected/xgboost/standard/complete/best_xgb_model_complete.joblib
+phenotyping/uncorrected/xgboost/standard/complete/best_xgb_model_complete.json
+

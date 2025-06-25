@@ -74,7 +74,7 @@ Phenotyping has been performed with [scanorama](https://github.com/brianhie/scan
 
 #### COZI
 ---------------------
-Running Cozi to infer NEP scores and saving results can be found [here]()
+Running Cozi to infer NEP scores and saving results can be found [here](https://github.com/SchapiroLabor/myeloma_imc/blob/main/src/downstream/COZI/cozi_MM.ipynb)
 
 #### Preprocessing of clinical data and associated spatial scores
 ---------------------

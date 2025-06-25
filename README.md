@@ -54,7 +54,7 @@ Phenotyping has been performed with [scanorama]() batch corrected (scanorama_cor
 #### Training of XGBoost model
 ---------------------
 - Ground Truth aggregated data was used to train an [xgboost]() model. The script integrates optuna for hyperparameter tuning.
-- Classifier was [applied]() on all data. Models are stored [here]() including performances
+- Classifier was [applied]() on all data. Models are uploaded to the data repository (see above)
 - Running the model on holdout data was performed [here](). Holdout data annotations can be downloaded form the data repository
 
 ### Downstream analysis

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","id":"67eba7a5-3f8f-434e-9abd-58947c8de53c","geometry":{"type":"Polygon","coordinates":[[[1000, 714],[989, 756],[867, 829],[686, 840],[593, 859],[597, 897],[503, 993],[501, 1000],[1000, 1000],[1000, 714]]]},"properties":{"objectType":"annotation","name":"Bone_0","classification":{"name":"Bone","color":[52, 11, 100]}}}]}

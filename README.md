@@ -1,6 +1,8 @@
 # myeloma_imc
 Repo for reproducing the spatial analysis on the myeloma cohort from NTNU (Standal Group) for the manuscript: [TBD]
 
+![Visual abstract](./Visual%20abstract.png)
+
 ## Raw data
 Raw data will be uploaded to:
 

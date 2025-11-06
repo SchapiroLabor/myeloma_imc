@@ -4,7 +4,7 @@ Repo for reproducing the spatial analysis on the myeloma cohort from NTNU (Stand
 ![Visual abstract](./Visual%20abstract.png)
 
 ## Raw data
-Raw data will be uploaded to:
+Raw data deposited to Zenodo: 10.5281/zenodo.17093203
 
 Raw data includes:
 
